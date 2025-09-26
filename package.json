@@ -1,0 +1,21 @@
+{
+  "name": "meli-proxy",
+  "version": "1.0.0",
+  "description": "Mercado Libre proxy service for FileMaker integrations.",
+  "main": "meli-proxy.js",
+  "scripts": {
+    "start": "node meli-proxy.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.10",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "pino": "^9.0.0",
+    "pino-http": "^9.0.0"
+  }
+}

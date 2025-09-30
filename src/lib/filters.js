@@ -42,7 +42,35 @@ function isUnshipped(status, allowedStatuses = []) {
   return allow.includes(s);
 }
 
+/**
+ * Elimina notificaciones duplicadas tomando el order_id más reciente.
+ * Mantiene el orden original del arreglo dado (más nuevos primero si ya venía así).
+ */
+function dedupeByOrderId(events) {
+  if (!Array.isArray(events) || events.length === 0) return [];
+
+  const seen = new Set();
+  const deduped = [];
+
+  for (const event of events) {
+    if (!event || typeof event !== "object") continue;
+
+    const rawId =
+      event.order_id ??
+      event.orderId ??
+      (event.topic === "orders_v2" && event.id ? event.id : null);
+
+    const key = rawId ? String(rawId) : null;
+    if (key && seen.has(key)) continue;
+    if (key) seen.add(key);
+    deduped.push(event);
+  }
+
+  return deduped;
+}
+
 module.exports = {
   isWithinWindow,
   isUnshipped,
+  dedupeByOrderId,
 };

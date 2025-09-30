@@ -1,6 +1,8 @@
 // src/routes/webhook.js
 const express = require("express");
 
+const { dedupeByOrderId } = require("../lib/filters");
+
 const router = express.Router();
 
 // Buffer circular en memoria (sin DB)
@@ -71,7 +73,8 @@ router.post("/", (req, res) => {
  */
 router.get("/events", (req, res) => {
   const items = ringBuffer.slice().reverse(); // más recientes primero
-  res.json(items);
+  const deduped = dedupeByOrderId(items);
+  res.json(deduped);
 });
 
 /**
@@ -81,27 +84,14 @@ router.get("/events", (req, res) => {
  * y luego elimina del buffer TODOS los eventos de esos order_id (incluye duplicados).
  */
 router.get("/consume", (req, res) => {
-  // 1) Construir mapa order_id -> evento más reciente
-  const map = new Map(); // order_id -> { order_id, seller_id, ts }
-  for (let i = ringBuffer.length - 1; i >= 0; i--) {
-    // recorrer de más nuevo a más viejo
-    const e = ringBuffer[i];
-    if (e.topic !== "orders_v2") continue;
-    if (!e.order_id || !e.seller_id) continue;
-    if (!map.has(String(e.order_id))) {
-      map.set(String(e.order_id), {
-        order_id: e.order_id,
-        seller_id: e.seller_id,
-        ts: e.ts,
-      });
-    }
-  }
+  const candidates = ringBuffer
+    .slice()
+    .reverse()
+    .filter((e) => e.topic === "orders_v2" && e.order_id && e.seller_id);
 
-  // 2) Armar salida en orden de recencia (ya quedó así por el bucle inverso)
-  const out = Array.from(map.values());
+  const out = dedupeByOrderId(candidates);
 
-  // 3) Borrar del buffer TODOS los eventos que correspondan a los order_id consumidos
-  const idsToPurge = new Set(Array.from(map.keys())); // order_id (string)
+  const idsToPurge = new Set(out.map((e) => String(e.order_id)));
   const kept = [];
   for (const e of ringBuffer) {
     const oid = e.order_id ? String(e.order_id) : null;
